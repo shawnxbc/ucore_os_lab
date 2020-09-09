@@ -46,6 +46,14 @@ idt_init(void) {
       *     You don't know the meaning of this instruction? just google it! and check the libs/x86.h to know more.
       *     Notice: the argument of lidt is idt_pd. try to find it!
       */
+      extern uintptr_t __vectors[];
+      for (int i = 0; i < 256; i++) {
+          SETGATE(idt[i], 0, KERNEL_CS, __vectors[i], DPL_KERNEL);
+      }
+      // 这里对系统调用做特殊处理：系统调用的编号0x80已经在trap.h中定义为T_SYSCALL，我们把系统调用的istrap设为1，
+      // 把描述符权限级别设置为3，因为系统调用是向普通用户进程暴露的服务接口，权限应该设置为用户级别。
+      SETGATE(idt[T_SYSCALL], 1, KERNEL_CS, __vectors[T_SYSCALL], DPL_USER);
+      lidt(&idt_pd);
 }
 
 static const char *
@@ -147,6 +155,9 @@ trap_dispatch(struct trapframe *tf) {
          * (2) Every TICK_NUM cycle, you can print some info using a funciton, such as print_ticks().
          * (3) Too Simple? Yes, I think so!
          */
+        ticks++;
+        if ((ticks % TICK_NUM) == 0)
+            print_ticks();
         break;
     case IRQ_OFFSET + IRQ_COM1:
         c = cons_getc();
