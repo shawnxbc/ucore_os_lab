@@ -143,6 +143,24 @@ print_regs(struct pushregs *regs) {
     cprintf("  eax  0x%08x\n", regs->reg_eax);
 }
 
+static void
+switch_to_user(struct trapframe *tf) {
+    if (tf->tf_cs != USER_CS) {
+        tf->tf_cs = USER_CS;
+        tf->tf_ds = tf->tf_es = tf->tf_ss = USER_DS;
+        tf->tf_eflags |= FL_IOPL_MASK;
+    }
+}
+
+static void
+switch_to_kernel(struct trapframe *tf) {
+    if (tf->tf_cs != KERNEL_CS) {
+        tf->tf_cs = KERNEL_CS;
+        tf->tf_ds = tf->tf_es = tf->tf_ss = KERNEL_DS;
+        tf->tf_eflags &= ~FL_IOPL_MASK;
+    }
+}
+
 /* trap_dispatch - dispatch based on what type of trap occurred */
 static void
 trap_dispatch(struct trapframe *tf) {
@@ -166,24 +184,28 @@ trap_dispatch(struct trapframe *tf) {
         break;
     case IRQ_OFFSET + IRQ_KBD:
         c = cons_getc();
+        switch (c) {
+            case '0':
+                cprintf("+++ switch to  kernel  mode +++\n");
+                switch_to_kernel(tf);
+                print_trapframe(tf);
+                break;
+            case '3':
+                cprintf("+++ switch to user mode +++\n");
+                switch_to_user(tf);
+                print_trapframe(tf);
+                break;
+        }
         cprintf("kbd [%03d] %c\n", c, c);
         break;
         
     // LAB1 CHALLENGE 1 : YOUR CODE you should modify below codes.
     case T_SWITCH_TOU:
-        if (tf->tf_cs != USER_CS) {
-            tf->tf_cs = USER_CS;
-            tf->tf_ds = tf->tf_es = tf->tf_ss = USER_DS;
-            tf->tf_eflags |= FL_IOPL_MASK;
-        }
+        switch_to_user(tf);
         break;
 
     case T_SWITCH_TOK:
-        if (tf->tf_cs != KERNEL_CS) {
-            tf->tf_cs = KERNEL_CS;
-            tf->tf_ds = tf->tf_es = tf->tf_ss = KERNEL_DS;
-            tf->tf_eflags &= ~FL_IOPL_MASK;
-        }
+        switch_to_kernel(tf);
         break;
 
     case IRQ_OFFSET + IRQ_IDE1:
