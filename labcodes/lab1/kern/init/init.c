@@ -84,7 +84,8 @@ lab1_print_cur_status(void) {
 static void 
 lab1_switch_to_user(void) {
     asm volatile (
-        "sub $0x8, %%esp \n"
+        "pushl %%ss \n"
+        "pushl %%esp \n"
         "int %0 \n"
         "movl %%ebp, %%esp"
         :

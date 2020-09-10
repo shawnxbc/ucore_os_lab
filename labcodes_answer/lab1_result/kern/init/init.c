@@ -85,8 +85,7 @@ static void
 lab1_switch_to_user(void) {
     //LAB1 CHALLENGE 1 : TODO
 	asm volatile (
-	    "pushl %%ss \n"
-        "pushl %%esp \n"
+	    "sub $0x8, %%esp \n"
 	    "int %0 \n"
 	    "movl %%ebp, %%esp"
 	    : 
